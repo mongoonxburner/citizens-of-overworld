@@ -1,0 +1,27 @@
+
+{
+	"language": "Solidity",
+	"settings": {
+		"viaIR": true,
+		"optimizer": {
+			"enabled": true,
+			"runs": 669,
+			"details": {
+				"yul": true
+			}
+		},
+		"outputSelection": {
+			"*": {
+			"*": [
+        "evm.bytecode",
+        "evm.deployedBytecode",
+        "devdoc",
+        "userdoc",
+        "metadata",
+        "abi"
+      ]
+			}
+		},
+		"evmVersion": "london"
+	}
+}
