@@ -86,7 +86,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
 
     //  ***********  //
     //  * Utility *  //
-    //  ***********  //    
+    //  ***********  //
 
     // Used for converting small uints to strings with low gas
     string[33] private lookup;
@@ -173,7 +173,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     }
 
     // Contains the DNA for every Citizen, keyed by tokenId.
-    mapping(uint256 => uint256) public tokenIdToSeed;    
+    mapping(uint256 => uint256) public tokenIdToSeed;
 
     /*
      ________                                 __      __                               
@@ -229,10 +229,13 @@ contract CitizensOfOverworld is ERC721A, Ownable {
         uint256 totalminted = _totalMinted();
         uint256 newSupply = totalminted + quantity;
         require(balanceOf(msg.sender) + quantity < 5, "MaxPerWallet");
-        if (newSupply + (30-tokensMintedByOwner) > MAX_SUPPLY) revert SoldOut();
+        if (newSupply + (30 - tokensMintedByOwner) > MAX_SUPPLY)
+            revert SoldOut();
         if (quantity > MAX_PER_TXN) revert MaxPerTxn();
         uint256 totalFee;
-        totalFee = (quantity - (hasMinted[msg.sender]?0:1)) * PRICE_AFTER_FIRST_MINT;
+        totalFee =
+            (quantity - (hasMinted[msg.sender] ? 0 : 1)) *
+            PRICE_AFTER_FIRST_MINT;
         require(msg.value == totalFee, "BadPrice");
         hasMinted[msg.sender] = true;
         lastWrite[msg.sender] = block.number;
@@ -241,7 +244,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
             uint256 seed = generateSeed(totalminted);
             tokenIdToSeed[totalminted] = seed;
             unchecked {
-              seed_nonce += seed;
+                seed_nonce += seed;
             }
         }
     }
@@ -271,18 +274,19 @@ contract CitizensOfOverworld is ERC721A, Ownable {
      * Creates DNA object for Overworld's newest Citizen via pseudorandom trait generation.
      */
     function generateSeed(uint256 tokenId) private view returns (uint256) {
-        return uint256(
-            keccak256(
-                abi.encodePacked(
-                    blockhash(block.number - 1),
-                    tokenId,
-                    msg.sender,
-                    block.timestamp,
-                    block.difficulty,
-                    seed_nonce
+        return
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        blockhash(block.number - 1),
+                        tokenId,
+                        msg.sender,
+                        block.timestamp,
+                        block.difficulty,
+                        seed_nonce
+                    )
                 )
-            )
-        );
+            );
     }
 
     /*
@@ -339,7 +343,12 @@ contract CitizensOfOverworld is ERC721A, Ownable {
             );
     }
 
-    function getDNA(uint256 seed) public pure returns (DNA memory) {
+    function getDNA(uint256 seed)
+        public
+        view
+        disallowIfStateIsChanging
+        returns (DNA memory)
+    {
         uint256 extractedRandomNum;
         int256 rand;
         uint256 mask = 0xFFFF;
@@ -659,7 +668,12 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     /**
      * Given a tokenId, returns its SVG.
      */
-    function tokenIdToSVG(uint256 tokenId) public view disallowIfStateIsChanging returns (string memory) {
+    function tokenIdToSVG(uint256 tokenId)
+        public
+        view
+        disallowIfStateIsChanging
+        returns (string memory)
+    {
         // Get the DNA derived from the tokenId's seed
         DNA memory dna = getDNA(tokenIdToSeed[tokenId]);
 
@@ -758,7 +772,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
             );
         }
 
-        return 
+        return
             string(
                 abi.encodePacked(
                     _SVG_PRE_STYLE_ATTRIBUTE,
@@ -1043,8 +1057,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     {
         if (isLegendary)
             return string.concat("background: ", backgrounds[12], ";");
-        else 
-            return string.concat("background: ", backgrounds[index], ";");
+        else return string.concat("background: ", backgrounds[index], ";");
     }
 
     /*
@@ -1091,10 +1104,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
      * The owner (0xMongoon) is allowed to mint up to 30 custom Citizens.
      * These will be reserved for giveaways || community ideas || memes.
      */
-    function ownerMint(uint256[] calldata customSeeds)
-        external
-        onlyOwner
-    {
+    function ownerMint(uint256[] calldata customSeeds) external onlyOwner {
         uint256 quantity = customSeeds.length;
         uint256 totalminted = _totalMinted();
         unchecked {
@@ -1115,6 +1125,10 @@ contract CitizensOfOverworld is ERC721A, Ownable {
 
     function withdrawAll() public payable onlyOwner {
         uint256 _share = address(this).balance;
-        require(payable(address(0x52937c80c288A2f61F7Ac95210DA0bc7C688a7ee)).send(_share));
+        require(
+            payable(address(0x52937c80c288A2f61F7Ac95210DA0bc7C688a7ee)).send(
+                _share
+            )
+        );
     }
 }
