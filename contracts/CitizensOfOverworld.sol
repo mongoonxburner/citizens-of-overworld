@@ -62,7 +62,8 @@ contract CitizensOfOverworld is ERC721A, Ownable {
 
     // ERC721A values.
     uint256 public constant MAX_SUPPLY = 11111;
-    uint256 public constant MAX_PER_TXN = 4;
+    uint256 public constant MAX_MINT_PER_WALLET = 4;
+    uint256 public constant MAX_MINT_OWNER = 30;
     uint256 public constant PRICE_AFTER_FIRST_MINT = 0.005 ether;
 
     //  ******************************  //
@@ -72,14 +73,12 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     // used to start/pause mint
     bool public mintLive = false;
 
-    // tracks if an address has already minted a Citizen or not
-    mapping(address => bool) public hasMinted;
+    // tracks last write and num minted for each address except owner
+    // last write used to prevent flashbots from reverting their mint after seeing traits they got (courtesy Circolors)
+    mapping(address => uint256) public mintedInfo;
 
     // tracks how many Citizens the owner has minted
     uint256 public tokensMintedByOwner = 0;
-
-    // used to prevent flashbots from reverting their mint after seeing traits they got (courtesy Circolors)
-    mapping(address => uint256) private lastWrite;
 
     // hashing stuff
     uint256 private seed_nonce;
@@ -197,7 +196,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     // Prevents someone calling read functions the same block they mint (courtesy of Circolors)
     modifier disallowIfStateIsChanging() {
         require(
-            owner() == msg.sender || lastWrite[msg.sender] < block.number,
+            owner() == msg.sender || (mintedInfo[msg.sender] >> 8) < block.number,
             "pwnd"
         );
         _;
@@ -207,7 +206,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     //  * CUSTOM ERRORS *  //
     //  ********/********  //
 
-    error MaxPerTxn();
+    error TooMany();
     error SoldOut();
 
     /*
@@ -226,16 +225,21 @@ contract CitizensOfOverworld is ERC721A, Ownable {
 
     function mint(uint256 quantity) external payable {
         require(mintLive, "!MintLive");
+
+        uint256 walletMinted = mintedInfo[msg.sender] & 0xFF;
+        uint256 newWalletMinted = walletMinted + quantity;
+        if (newWalletMinted > MAX_MINT_PER_WALLET) revert TooMany();
+
         uint256 totalminted = _totalMinted();
         uint256 newSupply = totalminted + quantity;
-        require(balanceOf(msg.sender) + quantity < 5, "MaxPerWallet");
-        if (newSupply + (30-tokensMintedByOwner) > MAX_SUPPLY) revert SoldOut();
-        if (quantity > MAX_PER_TXN) revert MaxPerTxn();
-        uint256 totalFee;
-        totalFee = (quantity - (hasMinted[msg.sender]?0:1)) * PRICE_AFTER_FIRST_MINT;
+        if (newSupply + (MAX_MINT_OWNER - tokensMintedByOwner) > MAX_SUPPLY) revert SoldOut();
+
+        uint256 totalFee =
+            (quantity - (mintedInfo[msg.sender] != 0 ? 0 : 1)) *
+            PRICE_AFTER_FIRST_MINT;
+
         require(msg.value == totalFee, "BadPrice");
-        hasMinted[msg.sender] = true;
-        lastWrite[msg.sender] = block.number;
+        mintedInfo[msg.sender] = (block.number << 8) + newWalletMinted;
         _safeMint(msg.sender, quantity);
         for (; totalminted < newSupply; ++totalminted) {
             uint256 seed = generateSeed(totalminted);
@@ -1098,9 +1102,9 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     {
         uint256 quantity = customSeeds.length;
         uint256 totalminted = _totalMinted();
+
         unchecked {
-            if (totalminted + quantity > MAX_SUPPLY) revert SoldOut();
-            if (quantity > 30) revert MaxPerTxn();
+            if (tokensMintedByOwner + quantity > MAX_MINT_OWNER) revert TooMany();
             _safeMint(msg.sender, quantity);
 
             for (uint256 i; i < quantity; ++i) {
