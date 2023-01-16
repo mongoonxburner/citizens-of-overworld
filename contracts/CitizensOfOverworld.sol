@@ -61,7 +61,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     //  **********  //
 
     // ERC721A values.
-    uint256 public constant MAX_SUPPLY = 11111;
+    uint256 public MAX_SUPPLY;
     uint256 public constant MAX_MINT_PER_WALLET = 4;
     uint256 public constant MAX_MINT_OWNER = 30;
     uint256 public constant PRICE_AFTER_FIRST_MINT = 0.005 ether;
@@ -187,7 +187,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     
     */
 
-    constructor() ERC721A("Citizens of Overworld Redux", "OVRWRLD") {}
+    constructor() ERC721A("Citizens of Overworld Redux Redux", "OVRWRLD") {}
 
     //  ***********************************  //
     //  * FLASHBOT MINT REVERT PREVENTION *  //
@@ -1079,7 +1079,8 @@ contract CitizensOfOverworld is ERC721A, Ownable {
         string[] calldata _legendaryAnimations,
         string calldata _legendaryRects,
         bytes calldata _colorHexList,
-        string[33] calldata _lookup
+        string[33] calldata _lookup,
+        uint256 _MAX_SUPPLY
     ) external onlyOwner {
         require(!compressedDataLoaded, "Loaded");
         compressedDataLoaded = true;
@@ -1090,6 +1091,7 @@ contract CitizensOfOverworld is ERC721A, Ownable {
         legendaryPixels = _legendaryRects;
         hexColorPalette = _colorHexList;
         lookup = _lookup;
+        MAX_SUPPLY = _MAX_SUPPLY;
     }
 
     /**
@@ -1119,7 +1121,23 @@ contract CitizensOfOverworld is ERC721A, Ownable {
     }
 
     function withdrawAll() public payable onlyOwner {
-        uint256 _share = address(this).balance;
-        require(payable(address(0x52937c80c288A2f61F7Ac95210DA0bc7C688a7ee)).send(_share));
+        uint256 eighty = (address(this).balance / 100) * 80;
+        uint256 ten = (address(this).balance / 100) * 10;
+
+        (bool sentM, ) = payable(
+            address(0x52937c80c288A2f61F7Ac95210DA0bc7C688a7ee)
+        ).call{value: eighty}("");
+        require(sentM, "Failed to send");
+
+        (bool sentI, ) = payable(
+            address(0x4533d1F65906368ebfd61259dAee561DF3f3559D)
+        ).call{value: ten}("");
+        require(sentI, "Failed to send");
+
+        (bool sentT, ) = payable(
+            address(0xB6eE8B1899e4cad7e28015995B82969e44BD0bb0)
+        ).call{value: ten}("");
+        require(sentT, "Failed to send");
+        
     }
 }
